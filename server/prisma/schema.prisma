@@ -1,0 +1,179 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  username              String    @unique
+  password              String    // Hashed password
+  role                  String    @default("user") // 'admin' | 'user'
+  dateOfBirth           DateTime?
+  country               String?
+  gender                String?
+  handle                String?   @unique
+  avatarUrl             String?
+  firstName             String?
+  lastName              String?
+  searchableByName      Boolean   @default(false)
+  bio                   String?
+  isBanned              Boolean   @default(false)
+  
+  // Relations
+  memories              Memory[]
+  companions            Companion[]
+  chronicleEvents       ChronicleEvent[]
+  
+  // Social
+  followers             UserFollows[] @relation("following")
+  following             UserFollows[] @relation("follower")
+  
+  sentFollowRequests    FollowRequest[] @relation("sender")
+  receivedFollowRequests FollowRequest[] @relation("receiver")
+
+  // Chat
+  sentMessages          ChatMessage[] @relation("sentMessages")
+  receivedMessages      ChatMessage[] @relation("receivedMessages")
+  
+  // Sharing
+  sharedMemories        SharedMemory[]
+  sharedChronicles      SharedChronicle[]
+}
+
+model UserFollows {
+  followerId  String
+  follower    User   @relation("follower", fields: [followerId], references: [id])
+  followingId String
+  following   User   @relation("following", fields: [followingId], references: [id])
+
+  @@id([followerId, followingId])
+}
+
+model FollowRequest {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      User     @relation("sender", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User     @relation("receiver", fields: [receiverId], references: [id])
+  status      String   @default("pending") // pending, accepted, rejected
+  createdAt   DateTime @default(now())
+}
+
+model Memory {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id])
+  locationName        String
+  title               String
+  description         String
+  eventDate           DateTime
+  createdAt           DateTime  @default(now())
+  geminiPondering     String?
+  latitude            Float?
+  longitude           Float?
+  includeInEventsTour Boolean   @default(false)
+  showInExplore       Boolean   @default(false)
+
+  images              Image[]
+  companions          MemoryCompanion[]
+  sharedWith          SharedMemory[]
+}
+
+model Image {
+  id        String   @id @default(uuid())
+  name      String
+  type      String
+  dataUrl   String   // Storing base64 for simplicity as per original mock, but should ideally be file path
+  memoryId  String?
+  memory    Memory?  @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  chronicleId String?
+  chronicle ChronicleEvent? @relation(fields: [chronicleId], references: [id], onDelete: Cascade)
+}
+
+model Companion {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id])
+  name                String
+  contact             String?
+  generalRelationship String?
+  notes               String?
+  
+  memories            MemoryCompanion[]
+}
+
+model MemoryCompanion {
+  memoryId    String
+  memory      Memory    @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  companionId String
+  companion   Companion @relation(fields: [companionId], references: [id], onDelete: Cascade)
+  roleInTrip  String?
+
+  @@id([memoryId, companionId])
+}
+
+model ChronicleEvent {
+  id                  String    @id @default(uuid())
+  userId              String
+  user                User      @relation(fields: [userId], references: [id])
+  eventDate           DateTime
+  title               String
+  description         String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  includeInEventsTour Boolean   @default(false)
+  
+  images              Image[]
+  sharedWith          SharedChronicle[]
+}
+
+model SharedMemory {
+  id        String   @id @default(uuid())
+  memoryId  String
+  memory    Memory   @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  userId    String   // User who it is shared WITH
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model SharedChronicle {
+  id          String         @id @default(uuid())
+  chronicleId String
+  chronicle   ChronicleEvent @relation(fields: [chronicleId], references: [id], onDelete: Cascade)
+  userId      String         // User who it is shared WITH
+  user        User           @relation(fields: [userId], references: [id])
+  createdAt   DateTime       @default(now())
+}
+
+model ChatMessage {
+  id                      String    @id @default(uuid())
+  senderId                String
+  sender                  User      @relation("sentMessages", fields: [senderId], references: [id])
+  receiverId              String
+  receiver                User      @relation("receivedMessages", fields: [receiverId], references: [id])
+  type                    String    // text, image, gif, file, memory, chronicle
+  text                    String?
+  fileUrl                 String?
+  fileName                String?
+  fileType                String?
+  fileSize                Int?
+  timestamp               DateTime  @default(now())
+  isRead                  Boolean   @default(false)
+  
+  linkedItemId            String?
+  linkedItemTitle         String?
+  
+  isEdited                Boolean   @default(false)
+  isDeleted               Boolean   @default(false)
+  originalMessageId       String?
+  originalMessageText     String?
+  originalMessageSenderId String?
+  forwardedFromUserId     String?
+}

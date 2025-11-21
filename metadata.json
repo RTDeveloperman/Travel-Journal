@@ -1,0 +1,6 @@
+{
+  "name": "Travel Journal & Chat",
+  "description": "A web application to create a travel journal with locations, notes, and images, enhanced by AI-generated descriptions, and a private chat platform for users.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
