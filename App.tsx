@@ -12,12 +12,13 @@ import { USER_ROLES } from './constants';
 import MemoryForm from './components/MemoryForm';
 import MemoryCard from './components/MemoryCard';
 import MemoryDetailModal from './components/MemoryDetailModal';
-import CompanionsManager from './components/CompanionsManager'; 
+import CompanionsManager from './components/CompanionsManager';
 import SearchFilters from './components/SearchFilters';
 import MapBoundsSelector from './components/MapBoundsSelector';
 import LoginPage from './components/LoginPage';
+import SignupPage from './components/SignupPage';
 import AdminDashboard from './components/AdminDashboard';
-import ChroniclePage from './components/ChroniclePage'; 
+import ChroniclePage from './components/ChroniclePage';
 import ChronicleTimelinePage from './components/ChronicleTimelinePage'; // New
 import ShareItemModal from './components/ShareItemModal';
 import ProfileManager from './components/ProfileManager';
@@ -42,16 +43,17 @@ import {
 } from './services/dataService';
 import * as authService from './services/authService';
 import { initializeMockChatData } from './services/chatService'; // For chat
-import { GenderOption } from './types'; 
+import { GenderOption } from './types';
 
-type ActiveView = 'travelJournal' | 'chronicle' | 'chat' | 'chronicleTimeline' | 'explore'; 
+type ActiveView = 'travelJournal' | 'chronicle' | 'chat' | 'chronicleTimeline' | 'explore';
 type SharingItemType = { id: string; title: string; type: 'memory' | 'chronicle', ownerUserId: string; };
 
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [showSignup, setShowSignup] = useState<boolean>(false);
   const [activeView, setActiveView] = useState<ActiveView>('travelJournal');
   const [allUsers, setAllUsers] = useState<User[]>([]); // Renamed for clarity
 
@@ -60,15 +62,15 @@ const App: React.FC = () => {
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [displayedMemories, setDisplayedMemories] = useState<MemoryEntry[]>([]);
   const [companionsList, setCompanionsList] = useState<Companion[]>([]);
-  const [chronicleEvents, setChronicleEvents] = useState<ChronicleEvent[]>([]); 
-  
+  const [chronicleEvents, setChronicleEvents] = useState<ChronicleEvent[]>([]);
+
   // UI states for User Dashboard (Travel Journal)
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingMemory, setEditingMemory] = useState<MemoryEntry | null>(null);
-  const [isProcessingForm, setIsProcessingForm] = useState<boolean>(false); 
+  const [isProcessingForm, setIsProcessingForm] = useState<boolean>(false);
   const [viewingMemory, setViewingMemory] = useState<MemoryEntry | null>(null);
   const [showCompanionsManager, setShowCompanionsManager] = useState<boolean>(false);
-  const [showProfileManager, setShowProfileManager] = useState<boolean>(false); 
+  const [showProfileManager, setShowProfileManager] = useState<boolean>(false);
   const [showSearchFilters, setShowSearchFilters] = useState<boolean>(false);
   const [searchCriteria, setSearchCriteria] = useState<SearchCriteria | null>(null);
   const [showMapBoundsSelector, setShowMapBoundsSelector] = useState<boolean>(false);
@@ -81,16 +83,16 @@ const App: React.FC = () => {
   // User Profile Viewer Modal State
   const [viewingUserProfile, setViewingUserProfile] = useState<User | null>(null);
   const [showUserProfileViewerModal, setShowUserProfileViewerModal] = useState<boolean>(false);
-  
+
   // Chat state & related modals
   const [activeChatTargetUserId, setActiveChatTargetUserId] = useState<string | null>(null);
   const [viewingChronicleFromChat, setViewingChronicleFromChat] = useState<ChronicleEvent | null>(null);
 
 
   useEffect(() => {
-    setIsLoading(false); 
+    setIsLoading(false);
   }, []);
-  
+
   // Auto-dismiss global error after 5 seconds
   useEffect(() => {
     if (globalError) {
@@ -111,7 +113,7 @@ const App: React.FC = () => {
       // Fetch all users first to have them available for context
       const allUsersList = await authService.fetchAllUsersPublicList();
       setAllUsers(allUsersList);
-      
+
       const [userMemories, userCompanions, userChronicleEvents] = await Promise.all([
         fetchMemoriesForUser(user.id),
         fetchCompanionsForUser(user.id),
@@ -119,17 +121,17 @@ const App: React.FC = () => {
       ]);
       setMemories(userMemories);
       setCompanionsList(userCompanions);
-      setChronicleEvents(userChronicleEvents); 
-      
+      setChronicleEvents(userChronicleEvents);
+
       // Initialize mock chat data (idempotent)
       initializeMockChatData(allUsersList);
-      
+
       const refreshedUser = allUsersList.find(u => u.id === user.id);
       if (refreshedUser) {
         setCurrentUser(refreshedUser);
       } else {
         console.error("Failed to refresh current user data, user might be invalid.");
-        handleLogout(); 
+        handleLogout();
       }
 
     } catch (e: any) {
@@ -142,7 +144,7 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
-    if (currentUser?.id) { 
+    if (currentUser?.id) {
       loadUserData(currentUser);
     } else {
       setMemories([]);
@@ -155,8 +157,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== USER_ROLES.USER || activeView !== 'travelJournal') {
-        setDisplayedMemories([]);
-        return;
+      setDisplayedMemories([]);
+      return;
     }
     if (!searchCriteria) {
       setDisplayedMemories(memories);
@@ -167,10 +169,10 @@ const App: React.FC = () => {
         const searchText = searchCriteria.text.toLowerCase();
         if (![memory.locationName, memory.title, memory.description].some(field => field.toLowerCase().includes(searchText))) return false;
       }
-      if (searchCriteria.eventDateStart && new Date(memory.eventDate).setHours(0,0,0,0) < new Date(searchCriteria.eventDateStart).setHours(0,0,0,0)) return false;
-      if (searchCriteria.eventDateEnd && new Date(memory.eventDate).setHours(0,0,0,0) > new Date(searchCriteria.eventDateEnd).setHours(0,0,0,0)) return false;
-      if (searchCriteria.createdAtStart && new Date(memory.createdAt).setHours(0,0,0,0) < new Date(searchCriteria.createdAtStart).setHours(0,0,0,0)) return false;
-      if (searchCriteria.createdAtEnd && new Date(memory.createdAt).setHours(0,0,0,0) > new Date(searchCriteria.createdAtEnd).setHours(0,0,0,0)) return false;
+      if (searchCriteria.eventDateStart && new Date(memory.eventDate).setHours(0, 0, 0, 0) < new Date(searchCriteria.eventDateStart).setHours(0, 0, 0, 0)) return false;
+      if (searchCriteria.eventDateEnd && new Date(memory.eventDate).setHours(0, 0, 0, 0) > new Date(searchCriteria.eventDateEnd).setHours(0, 0, 0, 0)) return false;
+      if (searchCriteria.createdAtStart && new Date(memory.createdAt).setHours(0, 0, 0, 0) < new Date(searchCriteria.createdAtStart).setHours(0, 0, 0, 0)) return false;
+      if (searchCriteria.createdAtEnd && new Date(memory.createdAt).setHours(0, 0, 0, 0) > new Date(searchCriteria.createdAtEnd).setHours(0, 0, 0, 0)) return false;
       if (searchCriteria.companions && searchCriteria.companions.length > 0) {
         if (!memory.companions || !memory.companions.some(mc => searchCriteria.companions!.includes(mc.companionId))) return false;
       }
@@ -184,18 +186,29 @@ const App: React.FC = () => {
   }, [memories, searchCriteria, currentUser, activeView]);
 
   const handleLogin = async (username: string, password_placeholder: string): Promise<User | null> => {
+    // authService.loginUser now throws on error, so we let it propagate to LoginPage
     const user = await authService.loginUser(username, password_placeholder);
     if (user) {
-      setCurrentUser(user); 
-      setActiveView('travelJournal'); 
+      setCurrentUser(user);
+      setActiveView('travelJournal');
       setGlobalError(null);
     }
-    return user; 
+    return user;
+  };
+
+  const handleRegister = async (userData: any) => {
+    const user = await authService.registerUser(userData);
+    if (user) {
+      setCurrentUser(user);
+      setActiveView('travelJournal');
+      setGlobalError(null);
+      setShowSignup(false);
+    }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    setShowProfileManager(false); 
+    setShowProfileManager(false);
     setMemories([]);
     setCompanionsList([]);
     setChronicleEvents([]);
@@ -210,26 +223,26 @@ const App: React.FC = () => {
     setAllUsers([]);
     setShowShareModal(false);
     setSharingItemDetails(null);
-    setShowUserProfileViewerModal(false); 
-    setViewingUserProfile(null); 
+    setShowUserProfileViewerModal(false);
+    setViewingUserProfile(null);
     setActiveChatTargetUserId(null); // Clear active chat target
     setViewingChronicleFromChat(null);
     setGlobalError(null);
   };
 
   const handleUpdateUserProfile = useCallback(async (
-    payload: { 
-      handle?: string; 
-      activeAvatarId?: string; 
-      newProfileImage?: ImageFile; 
+    payload: {
+      handle?: string;
+      activeAvatarId?: string;
+      newProfileImage?: ImageFile;
       deleteProfileImageId?: string;
       firstName?: string;
       lastName?: string;
       searchableByName?: boolean;
       country?: string;
       dateOfBirth?: string;
-      gender?: GenderOption; 
-      bio?: string; 
+      gender?: GenderOption;
+      bio?: string;
     }
   ): Promise<User | null> => {
     if (!currentUser) {
@@ -240,14 +253,14 @@ const App: React.FC = () => {
     setGlobalError(null);
     try {
       const updatedUser = await authService.updateUserProfile(currentUser.id, payload);
-      setCurrentUser(updatedUser); 
-      setAllUsers(prev => 
+      setCurrentUser(updatedUser);
+      setAllUsers(prev =>
         prev.map(u => u.id === updatedUser.id ? updatedUser : u)
       );
       return updatedUser;
     } catch (e: any) {
       setGlobalError("خطا در به‌روزرسانی پروفایل: " + e.message);
-      throw e; 
+      throw e;
     } finally {
       setIsLoading(false);
     }
@@ -256,15 +269,15 @@ const App: React.FC = () => {
 
   // --- Travel Journal Specific Handlers ---
   const handleAddNewMemory = useCallback(async (
-    locationName: string, title: string, description: string, images: ImageFile[], 
+    locationName: string, title: string, description: string, images: ImageFile[],
     companions: MemoryCompanionLink[], eventDate: string, coordinates?: Coordinates, includeInEventsTour?: boolean, showInExplore?: boolean
   ) => {
     if (!currentUser) { setGlobalError("ابتدا باید وارد شوید."); return; }
     setIsProcessingForm(true); setGlobalError(null);
     let geminiText = "امکان تولید تامل هوش مصنوعی وجود نداشت.";
     if (process.env.API_KEY) {
-        try { geminiText = await generateTravelReflection(locationName, description); } 
-        catch (e: any) { setGlobalError(`خطا در تولید تامل هوش مصنوعی: ${e.message}`); geminiText = "تولید تامل هوش مصنوعی با شکست مواجه شد.";}
+      try { geminiText = await generateTravelReflection(locationName, description); }
+      catch (e: any) { setGlobalError(`خطا در تولید تامل هوش مصنوعی: ${e.message}`); geminiText = "تولید تامل هوش مصنوعی با شکست مواجه شد."; }
     } else { geminiText = "کلید API پیکربندی نشده است."; }
 
     const memoryData = { locationName, title, description, images, eventDate, latitude: coordinates?.lat, longitude: coordinates?.lng, companions, includeInEventsTour, showInExplore };
@@ -272,7 +285,7 @@ const App: React.FC = () => {
       const newMemory = await addMemoryForUser(currentUser.id, memoryData, geminiText);
       setMemories(prev => [newMemory, ...prev]);
       setShowForm(false);
-    } catch (e: any) { setGlobalError("خطا در افزودن خاطره: " + e.message); } 
+    } catch (e: any) { setGlobalError("خطا در افزودن خاطره: " + e.message); }
     finally { setIsProcessingForm(false); }
   }, [currentUser]);
 
@@ -283,32 +296,32 @@ const App: React.FC = () => {
   ) => {
     if (!currentUser) { setGlobalError("ابتدا باید وارد شوید."); return; }
     setIsProcessingForm(true); setGlobalError(null);
-    
+
     const originalMemory = memories.find(mem => mem.id === id);
 
     const updatedMemoryData: MemoryEntry = {
-      id, userId: originalMemory?.userId || currentUser.id, 
-      locationName, title, description, images, eventDate, 
-      createdAt: originalCreatedAt, geminiPondering: originalGeminiPondering, 
+      id, userId: originalMemory?.userId || currentUser.id,
+      locationName, title, description, images, eventDate,
+      createdAt: originalCreatedAt, geminiPondering: originalGeminiPondering,
       latitude: coordinates?.lat, longitude: coordinates?.lng, companions: companionsLinks,
       includeInEventsTour: includeInEventsTour,
       showInExplore: showInExplore,
-      sharedWith: originalMemory?.sharedWith || [] 
+      sharedWith: originalMemory?.sharedWith || []
     };
     try {
       const updatedMem = await updateMemoryForUser(currentUser.id, updatedMemoryData);
       setMemories(prev => prev.map(mem => (mem.id === id ? updatedMem : mem)));
       setShowForm(false); setEditingMemory(null);
-    } catch (e: any) { setGlobalError("خطا در به‌روزرسانی خاطره: " + e.message); } 
+    } catch (e: any) { setGlobalError("خطا در به‌روزرسانی خاطره: " + e.message); }
     finally { setIsProcessingForm(false); }
   }, [currentUser, memories]);
 
   const handleFormSubmit = useCallback(async (
-    locationName: string, title: string, description: string, images: ImageFile[], 
+    locationName: string, title: string, description: string, images: ImageFile[],
     companions: MemoryCompanionLink[], eventDate: string, coordinates?: Coordinates, includeInEventsTour?: boolean, showInExplore?: boolean
   ) => {
     if (editingMemory) {
-      await handleUpdateMemory( editingMemory.id, locationName, title, description, images, companions, eventDate, coordinates, editingMemory.createdAt, editingMemory.geminiPondering, includeInEventsTour, showInExplore);
+      await handleUpdateMemory(editingMemory.id, locationName, title, description, images, companions, eventDate, coordinates, editingMemory.createdAt, editingMemory.geminiPondering, includeInEventsTour, showInExplore);
     } else {
       await handleAddNewMemory(locationName, title, description, images, companions, eventDate, coordinates, includeInEventsTour, showInExplore);
     }
@@ -317,7 +330,7 @@ const App: React.FC = () => {
   const handleDeleteMemory = useCallback(async (id: string) => {
     if (!currentUser) return;
     try {
-      await deleteMemoryForUser(currentUser.id, id); 
+      await deleteMemoryForUser(currentUser.id, id);
       setMemories(prev => prev.filter(memory => memory.id !== id));
       if (editingMemory && editingMemory.id === id) { setEditingMemory(null); setShowForm(false); }
       if (viewingMemory && viewingMemory.id === id) { setViewingMemory(null); }
@@ -335,11 +348,11 @@ const App: React.FC = () => {
   // --- Chronicle Event Handlers ---
   const handleAddChronicleEvent = useCallback(async (eventData: Omit<ChronicleEvent, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'sharedWith'>) => {
     if (!currentUser) { setGlobalError("ابتدا باید وارد شوید."); return; }
-    setIsLoading(true); 
+    setIsLoading(true);
     setGlobalError(null);
     try {
       const newEvent = await addChronicleEventForUser(currentUser.id, eventData);
-      setChronicleEvents(prev => [newEvent, ...prev].sort((a,b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()));
+      setChronicleEvents(prev => [newEvent, ...prev].sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()));
     } catch (e: any) { setGlobalError("خطا در افزودن رویداد روزنگار: " + e.message); }
     finally { setIsLoading(false); }
   }, [currentUser]);
@@ -353,8 +366,8 @@ const App: React.FC = () => {
     const eventUpdateWithShared = { ...eventData, sharedWith: originalEvent?.sharedWith || [] };
 
     try {
-      const updatedEvent = await updateChronicleEventForUser(currentUser.id, eventUpdateWithShared); 
-      setChronicleEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e).sort((a,b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()));
+      const updatedEvent = await updateChronicleEventForUser(currentUser.id, eventUpdateWithShared);
+      setChronicleEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e).sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime()));
     } catch (e: any) { setGlobalError("خطا در به‌روزرسانی رویداد روزنگار: " + e.message); }
     finally { setIsLoading(false); }
   }, [currentUser, chronicleEvents]);
@@ -364,7 +377,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     setGlobalError(null);
     try {
-      await deleteChronicleEventForUser(currentUser.id, eventId); 
+      await deleteChronicleEventForUser(currentUser.id, eventId);
       setChronicleEvents(prev => prev.filter(e => e.id !== eventId));
     } catch (e: any) { setGlobalError("خطا در حذف رویداد روزنگار: " + e.message); }
     finally { setIsLoading(false); }
@@ -385,63 +398,63 @@ const App: React.FC = () => {
       return;
     }
     if (sharingItemDetails.ownerUserId !== currentUser.id) {
-        setGlobalError("فقط صاحب آیتم می‌تواند آن را به اشتراک بگذارد.");
-        return;
+      setGlobalError("فقط صاحب آیتم می‌تواند آن را به اشتراک بگذارد.");
+      return;
     }
 
     let successCount = 0;
     let errorCount = 0;
     const errorMessages: string[] = [];
-    setGlobalError(null); 
+    setGlobalError(null);
 
     for (const targetUser of targetUsers) {
-        try {
-            await shareItem(
-                sharingItemDetails.id, 
-                sharingItemDetails.type, 
-                targetUser.id, 
-                targetUser.username, 
-                currentUser.id, 
-                targetUser.handle, 
-                targetUser.avatarUrl,
-                targetUser.firstName,
-                targetUser.lastName
-            );
-            successCount++;
-        } catch (e: any) {
-            errorCount++;
-            const userDisplay = targetUser.handle || targetUser.username;
-            errorMessages.push(`اشتراک با ${userDisplay}: ${e.message}`);
-            console.error(`Error sharing item ${sharingItemDetails.id} with ${userDisplay} (ID: ${targetUser.id}):`, e);
-        }
+      try {
+        await shareItem(
+          sharingItemDetails.id,
+          sharingItemDetails.type,
+          targetUser.id,
+          targetUser.username,
+          currentUser.id,
+          targetUser.handle,
+          targetUser.avatarUrl,
+          targetUser.firstName,
+          targetUser.lastName
+        );
+        successCount++;
+      } catch (e: any) {
+        errorCount++;
+        const userDisplay = targetUser.handle || targetUser.username;
+        errorMessages.push(`اشتراک با ${userDisplay}: ${e.message}`);
+        console.error(`Error sharing item ${sharingItemDetails.id} with ${userDisplay} (ID: ${targetUser.id}):`, e);
+      }
     }
 
-    if (currentUser) { 
-        if (sharingItemDetails.type === 'memory') {
-          const updatedMemories = await fetchMemoriesForUser(currentUser.id);
-          setMemories(updatedMemories);
-        } else {
-          const updatedChronicles = await fetchChronicleEventsForUser(currentUser.id);
-          setChronicleEvents(updatedChronicles);
-        }
+    if (currentUser) {
+      if (sharingItemDetails.type === 'memory') {
+        const updatedMemories = await fetchMemoriesForUser(currentUser.id);
+        setMemories(updatedMemories);
+      } else {
+        const updatedChronicles = await fetchChronicleEventsForUser(currentUser.id);
+        setChronicleEvents(updatedChronicles);
+      }
     }
 
     let alertMessage = "";
     if (successCount > 0) {
-        alertMessage += `آیتم "${sharingItemDetails.title}" با ${successCount} کاربر با موفقیت به اشتراک گذاشته شد.`;
+      alertMessage += `آیتم "${sharingItemDetails.title}" با ${successCount} کاربر با موفقیت به اشتراک گذاشته شد.`;
     }
     if (errorCount > 0) {
-        if (alertMessage) alertMessage += "\n";
-        alertMessage += `${errorCount} مورد اشتراک‌گذاری با خطا مواجه شد.`;
-        if (successCount === 0) { 
-            setGlobalError(`اشتراک‌گذاری آیتم "${sharingItemDetails.title}" با تمام کاربران منتخب با خطا مواجه شد. ${errorMessages.join(' ')}`);
-        } else { 
-            setGlobalError(`برخی از اشتراک‌گذاری‌ها برای آیتم "${sharingItemDetails.title}" با خطا مواجه شدند. ${errorMessages.join(' ')}`);
-        }
+      if (alertMessage) alertMessage += "\n";
+      alertMessage += `${errorCount} مورد اشتراک‌گذاری با خطا مواجه شد.`;
+      if (successCount === 0) {
+        setGlobalError(`اشتراک‌گذاری آیتم "${sharingItemDetails.title}" با تمام کاربران منتخب با خطا مواجه شد. ${errorMessages.join(' ')}`);
+      } else {
+        setGlobalError(`برخی از اشتراک‌گذاری‌ها برای آیتم "${sharingItemDetails.title}" با خطا مواجه شدند. ${errorMessages.join(' ')}`);
+      }
     }
-    
-    if(alertMessage && !globalError) alert(alertMessage); 
-    
+
+    if (alertMessage && !globalError) alert(alertMessage);
+
     handleCloseShareModal();
   };
 
@@ -449,10 +462,10 @@ const App: React.FC = () => {
   const handleSocialAction = useCallback(async (action: Promise<any>) => {
     if (!currentUser) return;
     try {
-        await action;
-        await loadUserData(currentUser); // Refresh all user data after action
+      await action;
+      await loadUserData(currentUser); // Refresh all user data after action
     } catch (e: any) {
-        setGlobalError(e.message || "خطا در انجام عملیات اجتماعی.");
+      setGlobalError(e.message || "خطا در انجام عملیات اجتماعی.");
     }
   }, [currentUser, loadUserData]);
 
@@ -470,9 +483,9 @@ const App: React.FC = () => {
   const handleCloseUserProfileViewerModal = () => {
     setViewingUserProfile(null);
     setShowUserProfileViewerModal(false);
-    if(activeChatTargetUserId) setActiveChatTargetUserId(null); // Clear if closing from profile modal chat button context
+    if (activeChatTargetUserId) setActiveChatTargetUserId(null); // Clear if closing from profile modal chat button context
   };
-  
+
   const handleInitiateChatFromProfile = (targetUser: User) => {
     setActiveChatTargetUserId(targetUser.id);
     setActiveView('chat');
@@ -482,31 +495,31 @@ const App: React.FC = () => {
   // --- Chat Item Viewer Handlers ---
   const handleViewItemFromChat = async (itemId: string, type: 'memory' | 'chronicle') => {
     if (type === 'memory') {
-        let memory = memories.find(m => m.id === itemId);
-        if (!memory && currentUser) { // If not found, refetch data
-            const allMemories = await fetchMemoriesForUser(currentUser.id);
-            setMemories(allMemories);
-            memory = allMemories.find(m => m.id === itemId);
-        }
+      let memory = memories.find(m => m.id === itemId);
+      if (!memory && currentUser) { // If not found, refetch data
+        const allMemories = await fetchMemoriesForUser(currentUser.id);
+        setMemories(allMemories);
+        memory = allMemories.find(m => m.id === itemId);
+      }
 
-        if (memory) {
-            setViewingMemory(memory); // Updated to directly set modal state
-        } else {
-            setGlobalError("خاطره مورد نظر یافت نشد یا شما به آن دسترسی ندارید.");
-        }
+      if (memory) {
+        setViewingMemory(memory); // Updated to directly set modal state
+      } else {
+        setGlobalError("خاطره مورد نظر یافت نشد یا شما به آن دسترسی ندارید.");
+      }
     } else if (type === 'chronicle') {
-        let event = chronicleEvents.find(e => e.id === itemId);
-        if (!event && currentUser) { // If not found, refetch data
-            const allChronicles = await fetchChronicleEventsForUser(currentUser.id);
-            setChronicleEvents(allChronicles);
-            event = allChronicles.find(e => e.id === itemId);
-        }
+      let event = chronicleEvents.find(e => e.id === itemId);
+      if (!event && currentUser) { // If not found, refetch data
+        const allChronicles = await fetchChronicleEventsForUser(currentUser.id);
+        setChronicleEvents(allChronicles);
+        event = allChronicles.find(e => e.id === itemId);
+      }
 
-        if (event) {
-            setViewingChronicleFromChat(event);
-        } else {
-            setGlobalError("رویداد روزنگار مورد نظر یافت نشد یا شما به آن دسترسی ندارید.");
-        }
+      if (event) {
+        setViewingChronicleFromChat(event);
+      } else {
+        setGlobalError("رویداد روزنگار مورد نظر یافت نشد یا شما به آن دسترسی ندارید.");
+      }
     }
   };
   const handleCloseChronicleDetailModal = () => {
@@ -521,24 +534,50 @@ const App: React.FC = () => {
   const handleViewMemoryDetails = (memory: MemoryEntry) => { if (showForm) setShowForm(false); setEditingMemory(null); setViewingMemory(memory); };
   const handleCloseMemoryDetails = () => setViewingMemory(null);
   const toggleCompanionsManager = () => setShowCompanionsManager(!showCompanionsManager);
-  const toggleProfileManager = () => setShowProfileManager(!showProfileManager); 
+  const toggleProfileManager = () => setShowProfileManager(!showProfileManager);
   const handleToggleSearchFilters = () => setShowSearchFilters(prev => !prev);
   const handleApplySearch = (criteria: SearchCriteria) => setSearchCriteria(criteria);
   const handleResetSearch = () => { setSearchCriteria(null); setCurrentSearchMapBounds(null); };
   const handleOpenMapBoundsSelector = () => setShowMapBoundsSelector(true);
   const handleCloseMapBoundsSelector = () => setShowMapBoundsSelector(false);
-  const handleMapBoundsSelected = (bounds: MapBoundsCoordinates) => { setCurrentSearchMapBounds(bounds); setShowMapBoundsSelector(false);};
+  const handleMapBoundsSelected = (bounds: MapBoundsCoordinates) => { setCurrentSearchMapBounds(bounds); setShowMapBoundsSelector(false); };
   const handleSetActiveView = (view: ActiveView) => {
     setActiveView(view);
   };
 
 
-  if (isLoading && !currentUser && !globalError) { 
-    return ( <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"> <div className="bg-white p-8 rounded-lg shadow-xl text-center"> <i className="fas fa-spinner fa-spin text-4xl text-sky-500 mb-4"></i> <p className="text-gray-700 text-lg">بارگذاری برنامه...</p> </div> </div> );
+  if (isLoading && !currentUser && !globalError) {
+    return (<div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"> <div className="bg-white p-8 rounded-lg shadow-xl text-center"> <i className="fas fa-spinner fa-spin text-4xl text-sky-500 mb-4"></i> <p className="text-gray-700 text-lg">بارگذاری برنامه...</p> </div> </div>);
   }
-  
+
   if (!currentUser) {
-    return ( <> {globalError && ( <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md p-4 z-[100]"> <div className="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 rounded-md shadow-lg text-right" role="alert"> <p className="font-bold">خطا</p> <p>{globalError}</p> </div> </div> )} <LoginPage onLogin={handleLogin} setLoading={setIsLoading} setError={setGlobalError} /> </> );
+    return (
+      <>
+        {globalError && (
+          <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-md p-4 z-[100]">
+            <div className="bg-red-100 border-r-4 border-red-500 text-red-700 p-4 rounded-md shadow-lg text-right" role="alert">
+              <p className="font-bold">خطا</p>
+              <p>{globalError}</p>
+            </div>
+          </div>
+        )}
+        {showSignup ? (
+          <SignupPage
+            onRegister={handleRegister}
+            onSwitchToLogin={() => setShowSignup(false)}
+            setLoading={setIsLoading}
+            setError={setGlobalError}
+          />
+        ) : (
+          <LoginPage
+            onLogin={handleLogin}
+            onSwitchToSignup={() => setShowSignup(true)}
+            setLoading={setIsLoading}
+            setError={setGlobalError}
+          />
+        )}
+      </>
+    );
   }
 
   if (currentUser.role === USER_ROLES.ADMIN) {
@@ -565,83 +604,83 @@ const App: React.FC = () => {
               {currentUser.avatarUrl ? (
                 <img src={currentUser.avatarUrl} alt="آواتار کاربر" className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-sky-300 shadow-lg ml-4 object-cover flex-shrink-0" />
               ) : (
-                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-sky-300 shadow-lg ml-4 bg-slate-700 flex items-center justify-center flex-shrink-0">
-                    <i className="fas fa-user text-3xl text-slate-400"></i>
-                 </div>
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-sky-300 shadow-lg ml-4 bg-slate-700 flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-user text-3xl text-slate-400"></i>
+                </div>
               )}
               <div className="flex-grow">
-                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.8)'}}>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight" style={{ textShadow: '2px 2px 8px rgba(0,0,0,0.8)' }}>
                   <i className="fas fa-atlas ml-2 text-sky-300"></i>{getWelcomeMessage()}
                 </h1>
-                 <p className="text-md sm:text-lg text-sky-100 mt-1" style={{textShadow: '1px 1px 4px rgba(0,0,0,0.6)'}}>
-                  {activeView === 'travelJournal' ? 'ماجراهای سفر خود را ثبت و مرور کنید.' : 
-                   activeView === 'chronicle' ? 'وقایع روزانه خود را مرور و ثبت کنید.' :
-                   activeView === 'chronicleTimeline' ? 'تمام رویدادهای خود را در یک نگاه ببینید.' :
-                   activeView === 'explore' ? 'خاطرات دیگران را کاوش کنید.' :
-                   activeView === 'chat' ? 'با دیگران گفتگو کنید.' : ''
+                <p className="text-md sm:text-lg text-sky-100 mt-1" style={{ textShadow: '1px 1px 4px rgba(0,0,0,0.6)' }}>
+                  {activeView === 'travelJournal' ? 'ماجراهای سفر خود را ثبت و مرور کنید.' :
+                    activeView === 'chronicle' ? 'وقایع روزانه خود را مرور و ثبت کنید.' :
+                      activeView === 'chronicleTimeline' ? 'تمام رویدادهای خود را در یک نگاه ببینید.' :
+                        activeView === 'explore' ? 'خاطرات دیگران را کاوش کنید.' :
+                          activeView === 'chat' ? 'با دیگران گفتگو کنید.' : ''
                   }
                 </p>
               </div>
             </div>
 
             <div className="flex space-x-2 space-x-reverse items-center">
-                <button 
-                    onClick={toggleProfileManager} 
-                    className="relative p-3 text-white bg-purple-500 bg-opacity-70 rounded-full hover:bg-purple-600 hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-purple-400 transition-all"
-                    aria-label="مدیریت پروفایل"
-                    title="پروفایل من"
-                >
-                    <i className="fas fa-user-edit text-xl"></i>
-                    {(currentUser.pendingFollowRequests?.length || 0) > 0 && 
-                      <span className="absolute -top-1 -right-1 flex h-5 w-5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">
-                            {currentUser.pendingFollowRequests?.length}
-                          </span>
-                      </span>
-                    }
-                </button>
-                <button
-                    onClick={handleLogout}
-                    className="p-3 text-white bg-red-600 bg-opacity-70 rounded-full hover:bg-red-700 hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500 transition-all"
-                    aria-label="خروج از حساب کاربری"
-                    title="خروج"
-                >
-                    <i className="fas fa-sign-out-alt text-xl"></i>
-                </button>
+              <button
+                onClick={toggleProfileManager}
+                className="relative p-3 text-white bg-purple-500 bg-opacity-70 rounded-full hover:bg-purple-600 hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-purple-400 transition-all"
+                aria-label="مدیریت پروفایل"
+                title="پروفایل من"
+              >
+                <i className="fas fa-user-edit text-xl"></i>
+                {(currentUser.pendingFollowRequests?.length || 0) > 0 &&
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center">
+                      {currentUser.pendingFollowRequests?.length}
+                    </span>
+                  </span>
+                }
+              </button>
+              <button
+                onClick={handleLogout}
+                className="p-3 text-white bg-red-600 bg-opacity-70 rounded-full hover:bg-red-700 hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500 transition-all"
+                aria-label="خروج از حساب کاربری"
+                title="خروج"
+              >
+                <i className="fas fa-sign-out-alt text-xl"></i>
+              </button>
             </div>
           </div>
-          
+
           <nav className="flex justify-center border-b-2 border-sky-600 border-opacity-50 pb-0">
-            <button 
+            <button
               onClick={() => handleSetActiveView('travelJournal')}
               className={`px-5 py-3 text-lg font-semibold rounded-t-lg transition-all duration-200 ease-in-out transform focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-opacity-50
                           ${activeView === 'travelJournal' ? 'bg-sky-500 bg-opacity-60 text-white border-b-4 border-sky-200 scale-105' : 'text-sky-100 hover:bg-sky-700 hover:bg-opacity-40 hover:text-white'}`}
             >
               <i className="fas fa-route mr-2"></i>خاطرات سفر
             </button>
-             <button 
+            <button
               onClick={() => handleSetActiveView('explore')}
               className={`px-5 py-3 text-lg font-semibold rounded-t-lg transition-all duration-200 ease-in-out transform focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-opacity-50
                           ${activeView === 'explore' ? 'bg-sky-500 bg-opacity-60 text-white border-b-4 border-sky-200 scale-105' : 'text-sky-100 hover:bg-sky-700 hover:bg-opacity-40 hover:text-white'}`}
             >
               <i className="fas fa-compass mr-2"></i>کاوش
             </button>
-            <button 
+            <button
               onClick={() => handleSetActiveView('chronicle')}
               className={`px-5 py-3 text-lg font-semibold rounded-t-lg transition-all duration-200 ease-in-out transform focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-opacity-50
                           ${activeView === 'chronicle' ? 'bg-sky-500 bg-opacity-60 text-white border-b-4 border-sky-200 scale-105' : 'text-sky-100 hover:bg-sky-700 hover:bg-opacity-40 hover:text-white'}`}
             >
               <i className="fas fa-calendar-alt mr-2"></i>روزنگار
             </button>
-            <button 
+            <button
               onClick={() => handleSetActiveView('chronicleTimeline')}
               className={`px-5 py-3 text-lg font-semibold rounded-t-lg transition-all duration-200 ease-in-out transform focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-opacity-50
                           ${activeView === 'chronicleTimeline' ? 'bg-sky-500 bg-opacity-60 text-white border-b-4 border-sky-200 scale-105' : 'text-sky-100 hover:bg-sky-700 hover:bg-opacity-40 hover:text-white'}`}
             >
               <i className="fas fa-stream mr-2"></i>خط زمانی روزنگار
             </button>
-             <button 
+            <button
               onClick={() => handleSetActiveView('chat')}
               className={`px-5 py-3 text-lg font-semibold rounded-t-lg transition-all duration-200 ease-in-out transform focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-opacity-50
                           ${activeView === 'chat' ? 'bg-sky-500 bg-opacity-60 text-white border-b-4 border-sky-200 scale-105' : 'text-sky-100 hover:bg-sky-700 hover:bg-opacity-40 hover:text-white'}`}
@@ -657,27 +696,27 @@ const App: React.FC = () => {
             <p>{globalError}</p>
           </div>
         )}
-        
+
         {!process.env.API_KEY && (activeView === 'travelJournal' || activeView === 'chronicle') && (
-           <div className="bg-yellow-100 border-r-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md shadow-lg text-right" role="alert">
+          <div className="bg-yellow-100 border-r-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded-md shadow-lg text-right" role="alert">
             <p className="font-bold">کلید API موجود نیست</p>
             <p>کلید Gemini API پیکربندی نشده است. برخی ویژگی‌های هوش مصنوعی (مانند تامل سفر و تور وقایع عمومی) غیرفعال خواهند بود.</p>
           </div>
         )}
 
         {showProfileManager && currentUser && (
-            <ProfileManager
-                isOpen={showProfileManager}
-                onClose={toggleProfileManager}
-                currentUser={currentUser}
-                onUpdateProfile={handleUpdateUserProfile}
-                isLoading={isLoading} 
-                allUsers={allUsers}
-                onAcceptFollowRequest={handleAcceptFollowRequest}
-                onDeclineFollowRequest={handleDeclineFollowRequest}
-                onUnfollow={handleUnfollow}
-                onViewUserProfile={handleViewUserProfile}
-            />
+          <ProfileManager
+            isOpen={showProfileManager}
+            onClose={toggleProfileManager}
+            currentUser={currentUser}
+            onUpdateProfile={handleUpdateUserProfile}
+            isLoading={isLoading}
+            allUsers={allUsers}
+            onAcceptFollowRequest={handleAcceptFollowRequest}
+            onDeclineFollowRequest={handleDeclineFollowRequest}
+            onUnfollow={handleUnfollow}
+            onViewUserProfile={handleViewUserProfile}
+          />
         )}
 
         {activeView === 'travelJournal' && (
@@ -707,32 +746,32 @@ const App: React.FC = () => {
               <MemoryForm onSubmit={handleFormSubmit} onCancel={handleCancelForm} isLoading={isProcessingForm} initialData={editingMemory} companionsList={companionsList} />
             )}
 
-            {isProcessingForm && !showForm && ( 
-                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-lg shadow-xl text-center"><i className="fas fa-spinner fa-spin text-4xl text-sky-500 mb-4"></i><p className="text-gray-700 text-lg">{editingMemory ? "در حال به‌روزرسانی..." : "در حال پردازش..."}</p></div>
-                </div>
+            {isProcessingForm && !showForm && (
+              <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+                <div className="bg-white p-8 rounded-lg shadow-xl text-center"><i className="fas fa-spinner fa-spin text-4xl text-sky-500 mb-4"></i><p className="text-gray-700 text-lg">{editingMemory ? "در حال به‌روزرسانی..." : "در حال پردازش..."}</p></div>
+              </div>
             )}
-            
+
             {showCompanionsManager && currentUser && (
-              <CompanionsManager 
-                isOpen={showCompanionsManager} 
-                onClose={toggleCompanionsManager} 
-                companions={companionsList} 
-                onAddCompanion={handleAddCompanion} 
+              <CompanionsManager
+                isOpen={showCompanionsManager}
+                onClose={toggleCompanionsManager}
+                companions={companionsList}
+                onAddCompanion={handleAddCompanion}
                 allUsers={allUsers.filter(u => u.id !== currentUser.id && u.role !== USER_ROLES.ADMIN)}
                 currentUser={currentUser}
-                onViewUserProfile={handleViewUserProfile} 
+                onViewUserProfile={handleViewUserProfile}
               />
             )}
 
             {isLoading && memories.length === 0 && <div className="text-center py-12 bg-white bg-opacity-80 rounded-lg shadow-xl mt-8"><i className="fas fa-spinner fa-spin text-6xl text-sky-500"></i><p className="mt-4 text-xl text-slate-600">در حال بارگذاری خاطرات شما...</p></div>}
-            
+
             {!isLoading && displayedMemories.length === 0 && !showForm && !viewingMemory && !showSearchFilters && memories.length > 0 && searchCriteria && (
-                <div className="text-center py-12 bg-white bg-opacity-80 rounded-lg shadow-xl mt-8">
-                    <i className="fas fa-search-minus text-7xl text-slate-400 mb-6"></i> <h2 className="text-3xl font-semibold text-slate-700">نتیجه‌ای یافت نشد</h2>
-                    <p className="text-slate-500 mt-3 text-lg">با معیارهای جستجوی شما هیچ خاطره‌ای مطابقت ندارد.</p>
-                    <button onClick={handleResetSearch} className="mt-6 px-5 py-2.5 text-sm font-medium text-white bg-sky-500 rounded-md hover:bg-sky-600">پاک کردن فیلترها</button>
-                </div>
+              <div className="text-center py-12 bg-white bg-opacity-80 rounded-lg shadow-xl mt-8">
+                <i className="fas fa-search-minus text-7xl text-slate-400 mb-6"></i> <h2 className="text-3xl font-semibold text-slate-700">نتیجه‌ای یافت نشد</h2>
+                <p className="text-slate-500 mt-3 text-lg">با معیارهای جستجوی شما هیچ خاطره‌ای مطابقت ندارد.</p>
+                <button onClick={handleResetSearch} className="mt-6 px-5 py-2.5 text-sm font-medium text-white bg-sky-500 rounded-md hover:bg-sky-600">پاک کردن فیلترها</button>
+              </div>
             )}
             {!isLoading && memories.length === 0 && !showForm && !viewingMemory && (
               <div className="text-center py-12 bg-white bg-opacity-80 rounded-lg shadow-xl mt-8">
@@ -750,7 +789,7 @@ const App: React.FC = () => {
         )}
 
         {activeView === 'explore' && currentUser && (
-          <ExplorePage 
+          <ExplorePage
             currentUser={currentUser}
             allUsers={allUsers}
             onViewUserProfile={handleViewUserProfile}
@@ -758,29 +797,29 @@ const App: React.FC = () => {
         )}
 
         {activeView === 'chronicle' && currentUser && (
-          <ChroniclePage 
+          <ChroniclePage
             currentUser={currentUser}
             events={chronicleEvents}
             onAddEvent={handleAddChronicleEvent}
             onUpdateEvent={handleUpdateChronicleEvent}
             onDeleteEvent={handleDeleteChronicleEvent}
-            isLoading={isLoading} 
+            isLoading={isLoading}
             setError={setGlobalError}
-            userMemories={memories} 
+            userMemories={memories}
             onShareEvent={handleOpenShareModal}
           />
         )}
-        
+
         {activeView === 'chronicleTimeline' && currentUser && (
-          <ChronicleTimelinePage 
+          <ChronicleTimelinePage
             currentUser={currentUser}
             allChronicleEvents={chronicleEvents}
             onViewEventDetails={(event) => setViewingChronicleFromChat(event)}
           />
         )}
-        
+
         {activeView === 'chat' && currentUser && (
-          <ChatPage 
+          <ChatPage
             key={currentUser.id} // Ensure remount on user change
             currentUser={currentUser}
             allUsers={allUsers.filter(u => u.id !== currentUser.id && u.role !== USER_ROLES.ADMIN)}
@@ -795,61 +834,61 @@ const App: React.FC = () => {
 
 
         {showShareModal && sharingItemDetails && currentUser && (
-            <ShareItemModal
-                isOpen={showShareModal}
-                onClose={handleCloseShareModal}
-                itemTitle={sharingItemDetails.title}
-                itemId={sharingItemDetails.id}
-                itemType={sharingItemDetails.type}
-                ownerUserId={sharingItemDetails.ownerUserId}
-                currentUser={currentUser}
-                allUsers={allUsers.filter(u => u.id !== currentUser.id && u.role !== USER_ROLES.ADMIN)}
-                onConfirmShare={handleConfirmShare}
-                onViewUserProfile={handleViewUserProfile} 
-            />
+          <ShareItemModal
+            isOpen={showShareModal}
+            onClose={handleCloseShareModal}
+            itemTitle={sharingItemDetails.title}
+            itemId={sharingItemDetails.id}
+            itemType={sharingItemDetails.type}
+            ownerUserId={sharingItemDetails.ownerUserId}
+            currentUser={currentUser}
+            allUsers={allUsers.filter(u => u.id !== currentUser.id && u.role !== USER_ROLES.ADMIN)}
+            onConfirmShare={handleConfirmShare}
+            onViewUserProfile={handleViewUserProfile}
+          />
         )}
-        
+
         {showUserProfileViewerModal && currentUser && (
-            <UserProfileViewerModal 
-                isOpen={showUserProfileViewerModal}
-                onClose={handleCloseUserProfileViewerModal}
-                targetUser={viewingUserProfile}
-                onStartChat={handleInitiateChatFromProfile} 
-                currentUser={currentUser}
-                onSendFollowRequest={handleSendFollowRequest}
-                onAcceptFollowRequest={handleAcceptFollowRequest}
-                onDeclineFollowRequest={handleDeclineFollowRequest}
-                onUnfollow={handleUnfollow}
-            />
+          <UserProfileViewerModal
+            isOpen={showUserProfileViewerModal}
+            onClose={handleCloseUserProfileViewerModal}
+            targetUser={viewingUserProfile}
+            onStartChat={handleInitiateChatFromProfile}
+            currentUser={currentUser}
+            onSendFollowRequest={handleSendFollowRequest}
+            onAcceptFollowRequest={handleAcceptFollowRequest}
+            onDeclineFollowRequest={handleDeclineFollowRequest}
+            onUnfollow={handleUnfollow}
+          />
         )}
-        
+
         {viewingChronicleFromChat && currentUser && (
-            <ChronicleDetailModal 
-                event={viewingChronicleFromChat}
-                onClose={handleCloseChronicleDetailModal}
-                currentUser={currentUser}
-                allUsers={allUsers}
-                onViewUserProfile={handleViewUserProfile}
-            />
+          <ChronicleDetailModal
+            event={viewingChronicleFromChat}
+            onClose={handleCloseChronicleDetailModal}
+            currentUser={currentUser}
+            allUsers={allUsers}
+            onViewUserProfile={handleViewUserProfile}
+          />
         )}
 
         {viewingMemory && (
-            <MemoryDetailModal
-                memory={viewingMemory}
-                companionsList={companionsList}
-                onClose={handleCloseMemoryDetails}
-                onEdit={() => {
-                    handleCloseMemoryDetails();
-                    handleStartEdit(viewingMemory);
-                }}
-                onDelete={handleDeleteMemory}
-                currentUser={currentUser}
-                onShare={handleOpenShareModal}
-            />
+          <MemoryDetailModal
+            memory={viewingMemory}
+            companionsList={companionsList}
+            onClose={handleCloseMemoryDetails}
+            onEdit={() => {
+              handleCloseMemoryDetails();
+              handleStartEdit(viewingMemory);
+            }}
+            onDelete={handleDeleteMemory}
+            currentUser={currentUser}
+            onShare={handleOpenShareModal}
+          />
         )}
 
 
-         <footer className="text-center mt-16 py-8 text-sm text-sky-100" style={{textShadow: '1px 1px 2px rgba(0,0,0,0.5)'}}>
+        <footer className="text-center mt-16 py-8 text-sm text-sky-100" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
           <p>&copy; {new Date().getFullYear()} اپلیکیشن دفترچه خاطرات و روزنگار.</p>
         </footer>
       </div>

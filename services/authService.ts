@@ -11,17 +11,21 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return response.json();
 }
 
-export const loginUser = async (username: string, password_placeholder: string): Promise<User | null> => {
-  try {
-    return await fetchApi<User>('/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password: password_placeholder })
-    });
-  } catch (error) {
-    console.error('Login failed:', error);
-    return null;
-  }
+export const loginUser = async (username: string, password_placeholder: string): Promise<User> => {
+  // Error handling is done in fetchApi, so we just let it propagate
+  return await fetchApi<User>('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password: password_placeholder })
+  });
+};
+
+export const registerUser = async (userData: any): Promise<User> => {
+  return await fetchApi<User>('/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData)
+  });
 };
 
 export const fetchAllUsersPublicList = async (): Promise<User[]> => {

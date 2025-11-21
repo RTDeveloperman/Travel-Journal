@@ -111,17 +111,5 @@ export const initializeMockDataForUser = (user: User) => {
 
 // Admin Dashboard Statistics
 export const getAdminDashboardStats = async (allUsersFromAuth: User[]): Promise<AdminDashboardStats> => {
-  // Placeholder: Implement admin stats endpoint if needed
-  return {
-    totalUsers: 0,
-    totalActiveUsers: 0,
-    totalMemories: 0,
-    totalChronicleEvents: 0,
-    userActivityStats: [],
-    totalSharedMemories: 0,
-    totalSharedChronicleEvents: 0,
-    percentageSharedMemories: 0,
-    percentageSharedChronicleEvents: 0,
-    averageItemsPerUser: 0
-  };
+  return fetchApi<AdminDashboardStats>('/admin/stats');
 };

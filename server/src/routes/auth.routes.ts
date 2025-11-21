@@ -6,6 +6,10 @@ const router = express.Router();
 // Login
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
+
+    if (!username || !username.trim()) {
+        return res.status(400).json({ error: 'نام کاربری الزامی است' });
+    }
     try {
         // For simplicity, we're not hashing passwords in this demo, but in production you MUST.
         let user = await prisma.user.findUnique({
@@ -13,18 +17,13 @@ router.post('/login', async (req, res) => {
         });
 
         if (!user) {
-            // Auto-register for demo purposes if user doesn't exist
-            user = await prisma.user.create({
-                data: {
-                    username,
-                    password, // In real app, hash this!
-                    handle: `@${username}`,
-                    firstName: username,
-                    role: 'user'
-                }
-            });
+            return res.status(401).json({ message: 'نام کاربری یا رمز عبور اشتباه است' });
         } else if (user.password !== password) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'نام کاربری یا رمز عبور اشتباه است' });
+        }
+
+        if (user.isBanned) {
+            return res.status(403).json({ error: 'حساب کاربری شما مسدود شده است' });
         }
 
         res.json(user);
@@ -36,6 +35,10 @@ router.post('/login', async (req, res) => {
 // Register (for admin or explicit registration)
 router.post('/register', async (req, res) => {
     const { username, password, firstName, lastName, dateOfBirth, country, gender, searchableByName, bio } = req.body;
+
+    if (!username || !username.trim()) {
+        return res.status(400).json({ error: 'نام کاربری الزامی است' });
+    }
     try {
         const existingUser = await prisma.user.findUnique({ where: { username } });
         if (existingUser) {

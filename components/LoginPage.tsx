@@ -4,11 +4,12 @@ import { User } from '../types';
 
 interface LoginPageProps {
   onLogin: (username: string, password_placeholder: string) => Promise<User | null>; // Password handling is complex and backend-dependent
+  onSwitchToSignup: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin, setLoading, setError }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onSwitchToSignup, setLoading, setError }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState(''); // Placeholder for password
 
@@ -79,8 +80,19 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, setLoading, setError }) 
             ورود
           </button>
         </form>
+
+        <div className="mt-6 text-center border-t border-slate-200 pt-4">
+          <p className="text-slate-600 mb-2">حساب کاربری ندارید؟</p>
+          <button
+            onClick={onSwitchToSignup}
+            className="text-sky-600 hover:text-sky-800 font-semibold hover:underline focus:outline-none"
+          >
+            ثبت نام کنید
+          </button>
+        </div>
+
         <p className="text-xs text-slate-500 mt-6 text-center">
-          نام‌های کاربری نمونه برای تست: <code className="bg-slate-200 px-1 rounded">admin</code> یا <code className="bg-slate-200 px-1 rounded">user1</code>. (رمز عبور اهمیتی ندارد برای این نسخه نمایشی)
+          نام‌های کاربری نمونه برای تست: <code className="bg-slate-200 px-1 rounded">admin</code> یا <code className="bg-slate-200 px-1 rounded">user1</code>.
         </p>
       </div>
     </div>

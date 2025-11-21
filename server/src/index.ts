@@ -20,6 +20,7 @@ import companionRoutes from './routes/companions.routes';
 import chronicleRoutes from './routes/chronicles.routes';
 import chatRoutes from './routes/chat.routes';
 import userRoutes from './routes/users.routes';
+import adminRoutes from './routes/admin.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/memories', memoryRoutes);
@@ -27,6 +28,7 @@ app.use('/api/companions', companionRoutes);
 app.use('/api/chronicles', chronicleRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
     res.send('Travel Journal API is running');
